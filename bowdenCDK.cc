@@ -5,13 +5,15 @@
  */
 
 #include <iostream>
-#include <stdint.h>
 #include "cdk.h"
-
+#include <stdint.h>
+#include <fstream>
+#include <string>
+#include <sstream>
 
 #define MATRIX_WIDTH 3
 #define MATRIX_HEIGHT 5
-#define BOX_WIDTH 15
+#define BOX_WIDTH 20
 #define MATRIX_NAME_STRING "Binary File Contents"
 
 using namespace std;
@@ -49,7 +51,15 @@ int main()
   WINDOW	*window;
   CDKSCREEN	*cdkscreen;
   CDKMATRIX     *myMatrix;           // CDK Screen Matrix
-
+  BinaryFileHeader *t1 = new BinaryFileHeader();
+  
+  ifstream input ("cs3377.bin", ios::in | ios::binary);
+  if(!input.is_open())
+    {
+      cout << "Could not open file.\n";
+      exit(-1);
+    }
+  input.read((char *) t1, sizeof(BinaryFileHeader));
   // Remember that matrix starts out at 1,1.
   // Since arrays start out at 0, the first entries
   // below ("R0", and "C0") are just placeholders
@@ -90,16 +100,54 @@ int main()
   /* Display the Matrix */
   drawCDKMatrix(myMatrix, true);
 
+
+  string s1 = "Magic: 0x";
+  stringstream ss1;
+  ss1 << hex << uppercase << t1->magicNumber;
+  s1 += ss1.str();
+
+  string s2 = "Version: ";
+  stringstream ss2;
+  ss2 << t1->versionNumber;
+  s2 += ss2.str();
+
+  string s3 = "NumRecords: ";
+  stringstream ss3;
+  ss3 << t1->numRecords;
+  s3 += ss3.str();
+
+  setCDKMatrixCell(myMatrix, 1, 1, s1.c_str());
+  setCDKMatrixCell(myMatrix, 1, 2, s2.c_str());
+  setCDKMatrixCell(myMatrix, 1, 3, s3.c_str());
+
+  drawCDKMatrix(myMatrix, true);
+
+  int i = 2;
+
+  BinaryFileRecord *t2 = new BinaryFileRecord();
+  while(input.read((char *) t2, sizeof(BinaryFileRecord)) && i <= 5)
+    {
+      string str1, str2;
+      stringstream ss1, ss2;
+      ss2 << t2->stringBuffer;
+      str2 += ss2.str();
+      ss1 << "strlen: " << static_cast<uint16_t> (t2->strLength);
+      str1 += ss1.str();
+
+      setCDKMatrixCell(myMatrix, i, 1, str1.c_str());
+      setCDKMatrixCell(myMatrix, i, 2, str2.c_str());
+      i++;
+    }
+
   /*
    * Dipslay a message
    */
-  setCDKMatrixCell(myMatrix, 2, 2, "Test Message");
   drawCDKMatrix(myMatrix, true);    /* required  */
 
   /* So we can see results, pause until a key is pressed. */
   unsigned char x;
   cin >> x;
-
+  input.close();
   // Cleanup screen
   endCDK();
 }
